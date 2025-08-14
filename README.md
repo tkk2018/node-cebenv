@@ -41,6 +41,20 @@ Before proceeding, make sure you have the following set up:
 
    These credentials are required for the EB CLI to interact with your AWS account.
 
+4. Configure eb cli
+
+   ```
+   eb init
+   ```
+
+   This command initializes your Elastic Beanstalk project in the current directory. It sets up the .elasticbeanstalk/config.yml file, which stores your application and environment settings.
+
+   You'll be prompted to enter:
+
+    - AWS region
+    - Application name: Choose your exisiting application.
+    - Default environment: This can be changed later using `eb use <environment-name>`.
+
 ## Install
 
 ```
