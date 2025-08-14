@@ -70,7 +70,7 @@ program.command("clone")
     --from base-config \\
     --save-as new-config \\
     --env-name node-XYZ-test \\
-    --env-product 'XYZ Test'
+    --product 'XYZ Test'
     `
   )
   .action(async function (/** @type {CloneEnvOption} */ opts) {
