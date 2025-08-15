@@ -6,6 +6,7 @@ const { Command } = require("commander");
 const { S3Client } = require("@aws-sdk/client-s3");
 const { ElasticBeanstalkClient } = require("@aws-sdk/client-elastic-beanstalk");
 // const path = require('path');
+const { Cron } = require("croner");
 const {
   cloneEnvironment,
   cloneSavedConfiguration,
@@ -219,6 +220,8 @@ program.command("app:deploy")
   .option("--product [tag]", "Adds a tag named 'Product' with the given value for application.")
   .option("--filepath [path]", optionDescs.filepath)
   .option("--skip-if-exist", optionDescs.skipIfExist, false)
+  .option("--dt [datetime]", "The scheduled deployment datetime, e.g. 2025-01-01T00:00:00. Assumes local timezone if --tz is not specified.")
+  .option("--tz [timezone]", "The timezone for --dt, e.g. Asia/Kuala_Lumpur.")
   .action(async function (/** @type {DeployApplicationOption} */ opts) {
     const { application_name, environemnt_name } = getLocalConfig(aws_eb_local_config_path);
     const s3client = new S3Client();
@@ -245,9 +248,38 @@ program.command("app:deploy")
       }
     }
 
-    const deployed = await deployApplication(ebclient, environemnt_name, opts.version);
+    const runDeployment = async () => {
+      const deployed = await deployApplication(ebclient, environemnt_name, opts.version);
+      console.log(deployed);
+    };
 
-    console.log(deployed);
+    if (!opts.dt) {
+      await runDeployment();
+    }
+    else {
+      const job = new Cron(opts.dt, { timezone: opts.tz }, async () => {
+        await runDeployment();
+        process.exit(0);
+      });
+
+      const future = job.nextRun();
+      if (future) {
+        const now = new Date();
+        const diffMs = future.getTime() - now.getTime();
+
+        const diffMinutes = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMinutes / 60);
+        const remaining = diffHours > 0
+          ? `${diffHours} hour(s) and ${diffMinutes % 60} minute(s)`
+          : `${diffMinutes} minute(s)`;
+
+        console.log(`The deployment is scheduled on ${future.toISOString()}, ${remaining} from now`);
+        process.stdin.resume();
+      }
+      else {
+        throw new Error("Cannot schedule because the given time has already passed.");
+      }
+    }
   })
   ;
 
@@ -271,8 +303,14 @@ program.parse(process.argv);
  */
 
 /**
+ * @typedef {object} ScheduleTime
+ * @property {string} dt - The scheduled datetime in yyyy-MM-dd'T'HH:mm:ss (e.g., "2025-01-01T00:00:00"). Default to local timezone.
+ * @property {string} tz - The timezone identifier for the datetime (e.g., "Asia/Kuala_Lumpur").
+ */
+
+/**
  * The options for `app:deploy`.
- * @typedef {ApplicationVersion & Partial<UploadApplicationProperty>} DeployApplicationOption
+ * @typedef {ApplicationVersion & Partial<UploadApplicationProperty> & Partial<ScheduleTime>} DeployApplicationOption
  */
 
 /**
