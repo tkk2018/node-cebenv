@@ -66,3 +66,79 @@ npm install -D https://github.com/tkk2018/node-cebenv
 ```
 npx cebenv -h
 ```
+
+## Useful Tips
+
+To view all environments associated with your application:
+
+```
+eb list
+```
+
+If your application has multiple environments (e.g., production, testing), switch between them using:
+
+```
+eb use env-name
+```
+
+To list saved environment configurations:
+
+```
+eb config list
+```
+
+To download a specific configuration:
+
+```
+eb config get config-name
+```
+
+By default, the downloaded configuration will be saved to `./.elasticbeanstalk/saved_configs/config-name.cfg.yml`.
+
+After editing the downloaded config, upload it as a new configuration:
+
+```
+eb config put new-config-name
+```
+
+Then, create a new environment using that configuration:
+
+```
+eb create new-env-name --cfg my-config
+```
+
+List available `platformArn`
+
+```
+aws elasticbeanstalk list-platform-versions
+```
+
+To filter for Node.js platforms only:
+
+```
+aws elasticbeanstalk list-platform-versions --query "PlatformSummaryList[?PlatformCategory=='Node.js']"
+```
+
+View application versions
+
+```
+aws elasticbeanstalk describe-application-versions --application-name application-name
+```
+
+Upload source bundle to S3
+
+```
+aws s3 cp ./build/${filename}.zip s3://elasticbeanstalk-${region}-${random-id}/${filename}.zip
+```
+
+The S3 bucket/name `elasticbeanstalk-${region}-${random-id}` is automatically generated when you first upload an application via the AWS Web Console. You can locate it by navigating to the S3 service in the console and filtering for buckets that contain `elasticbeanstalk` in their name.
+
+Create a new application version by using the uploaded source from S3
+
+```
+aws elasticbeanstalk create-application-version \
+  --application-name my-app \
+  --version-label v1 \
+  --source-bundle S3Bucket=elasticbeanstalk-${region}-${random-id},S3Key=${filename}.zip
+```
+
